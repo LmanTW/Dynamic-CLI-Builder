@@ -3,7 +3,7 @@ const wcwidth = require('wcwidth')
 
 //CLI
 class CLI {
-  #layout = [Layout.pageTab, Layout.blank, Layout.pageContent, Layout.blank, Layout.input]
+  #layout = [Layout.pageTab, Layout.blank, Layout.pageContent, Layout.blank, Layout.input, Layout.blank]
   #style = {
     background: BackgroundColor.reset,
 
@@ -51,7 +51,7 @@ class CLI {
 
     stream.on('close', () => {})
 
-    setInterval(() => this.#display(this), 100)
+    setInterval(() => this.#display(this), 150)
   }
 
   get layout () {return this.#layout}
@@ -107,6 +107,12 @@ class CLI {
     return this
   }
 
+  //設定輸入
+  setInput (string) {
+    if (typeof string !== 'string') throw new Error('參數 string 必須為一個 <string>')
+    this.#data.input = string
+  }
+
   //聆聽事件
   event (name, callback) {
     if (typeof callback !== 'function') throw new Error('參數 <callback> 必須為一個 <function>')
@@ -130,31 +136,32 @@ class CLI {
     })
     while (lines.length < process.stdout.rows) lines.push('')
     lines.forEach((item, index) => {
-      let analysis = []
-      let currentColor = ''
-      for (let i = 0; i < item.length; i++) {
-        if (item.substring(i, i+2) === '\x1b[') {
-          for (let end = i+2; end < item.length; end++) {
-            if (item[end] == 'm') {
-              currentColor = item.substring(i, end)
-              i+=((end-i)-1)
-              break
+      if (item.length > 0) {
+        let analysis = []
+        let currentColor = ''
+        for (let i = 0; i < item.length; i++) {
+          if (item.substring(i, i+2) === '\x1b[') {
+            for (let end = i+2; end < item.length; end++) {
+              if (item[end] == 'm') {
+                currentColor = item.substring(i, end)
+                i+=((end-i)-1)
+                break
+              }
             }
+          } else {
+            analysis.push({ string: item[i], color: currentColor })
+            currentColor = ''
           }
-        } else {
-          analysis.push({ string: item[i], color: currentColor })
-          currentColor = ''
         }
+        while (wcwidth(analysis.map((item) => {return item.string}).join('')) < process.stdout.columns) analysis.push({ string: ' ', color: '' })
+        while (wcwidth(analysis.map((item) => {return item.string}).join('')) > process.stdout.columns) analysis.splice(analysis.length-1, 1)
+        lines[index] = `${this.#style.background}${analysis.map((item) => {return `${item.color}${item.string}`}).join('')}`
       }
-      while (wcwidth(analysis.map((item) => {return item.string}).join('')) < process.stdout.columns) analysis.push({ string: ' ', color: '' })
-      while (wcwidth(analysis.map((item) => {return item.string}).join('')) > process.stdout.columns) analysis.splice(analysis.length-1, 1)
-      lines[index] = `${this.#style.background}${analysis.map((item) => {return `${item.color}${item.string}`}).join('')}`
     })
 
     let string = lines.join(`\n`)
 
-    process.stdout.write('\x1B[2J\x1B[3J\x1B[H\x1Bc')
-    process.stdout.write(string)
+    process.stdout.write(`\x1B[2J\x1B[3J\x1B[H\x1Bc ${lines.join(`\n${BackgroundColor.reset}`)}`)
   }
 
   //顯示組件
