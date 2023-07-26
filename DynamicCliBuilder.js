@@ -64,7 +64,7 @@ class CLI {
     if (!Array.isArray(layout)) throw new Error('參數 layout 必須為一個 <array>')
     if (layout.filter((item) => item === 'pageContent').length > 1) throw new Error(`佈局中最多只能有一個 pagetContent`)
     layout.forEach((item) => {
-      if (item !== 'pageTab' || item !== 'pageContent' || item !== 'input' || item !== 'blank') throw new Error(`找不到佈局 ${item}`)
+      if (item !== 'pageTab' && item !== 'pageContent' && item !== 'input' && item !== 'blank') throw new Error(`找不到佈局 ${item}`)
     })
     this.#layout = layout
     return this
