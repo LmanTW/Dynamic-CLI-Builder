@@ -1,9 +1,10 @@
 const readline = require('readline')
 const wcwidth = require('wcwidth')
+const os = require('os')
 
 //CLI
 class CLI {
-  #layout = [Layout.pageTab, Layout.blank, Layout.pageContent, Layout.blank, Layout.input, Layout.blank]
+  #layout = [Layout.pageTab, Layout.background, Layout.pageContent, Layout.background, Layout.input, Layout.blank]
   #style = {
     background: BackgroundColor.reset,
 
@@ -34,11 +35,13 @@ class CLI {
       else if (data.toString('hex') === '1b5b44') this.#data.currentPage--
       else if (data.toString('hex') === '1b5b43') this.#data.currentPage++
       else if (data.toString('hex') === '1b5b41') {
-        if (this.#pages[this.#data.currentPage].scrollY > 0) this.#pages[this.#data.currentPage].scrollY--
+        if (this.#pages[this.#data.currentPage].selectY > 0) this.#pages[this.#data.currentPage].selectY--
+        if (this.#pages[this.#data.currentPage].selectY <= this.#pages[this.#data.currentPage].scrollY) this.#pages[this.#data.currentPage].scrollY = this.#pages[this.#data.currentPage].selectY
       } else if (data.toString('hex') === '1b5b42') {
         let pageContent = this.#pages[this.#data.currentPage].callback()
         if (!Array.isArray(pageContent)) throw new Error('參數 callback 必須為一個返回 <array> 的 <function>')
-        if (this.#pages.length > 0 && this.#pages[this.#data.currentPage].scrollY < pageContent.length-((process.stdout.rows-this.#layout.length)+1)) this.#pages[this.#data.currentPage].scrollY++
+        if (this.#pages.length > 0 && this.#pages[this.#data.currentPage].selectY < pageContent.length-1) this.#pages[this.#data.currentPage].selectY++
+        if (this.#pages[this.#data.currentPage].selectY > this.#pages[this.#data.currentPage].scrollY+(process.stdout.rows-this.#layout.length)) this.#pages[this.#data.currentPage].scrollY++
       } else if (data.toString('hex') !== '09') {
         this.#data.input+=data.toString('utf8')
         this.#callEvent('input', data.toString('utf8'))
@@ -51,7 +54,7 @@ class CLI {
 
     stream.on('close', () => {})
 
-    setInterval(() => this.#display(this), 150)
+    setInterval(() => this.#display(), 150)
   }
 
   get layout () {return this.#layout}
@@ -64,7 +67,7 @@ class CLI {
     if (!Array.isArray(layout)) throw new Error('參數 layout 必須為一個 <array>')
     if (layout.filter((item) => item === 'pageContent').length > 1) throw new Error(`佈局中最多只能有一個 pagetContent`)
     layout.forEach((item) => {
-      if (item !== 'pageTab' && item !== 'pageContent' && item !== 'input' && item !== 'blank') throw new Error(`找不到佈局 ${item}`)
+      if (item !== 'pageTab' && item !== 'pageContent' && item !== 'input' && item !== 'blank' && item !== 'background') throw new Error(`找不到佈局 ${item}`)
     })
     this.#layout = layout
     return this
@@ -78,13 +81,13 @@ class CLI {
   }
 
   //添加頁面
-  addPage (name, callback) {
+  addPage (name, callback, hide) {
     if (typeof name !== 'string') throw new Error(`參數 name 必須為一個 <string>`)
     if (typeof callback !== 'function') throw new Error(`參數 callback 必須為一個 <function>`)
     this.#pages.forEach((item) => {
       if (item.name === name) throw new Error(`已有名為 ${name} 的頁面`)
     })
-    this.#pages.push({ name, callback, scrollY: 0 })
+    this.#pages.push({ name, callback, hide: (hide === undefined) ? false : hide, selectY: 0, scrollY: 0 })
     return this
   }
 
@@ -131,9 +134,7 @@ class CLI {
   //顯示
   #display () {
     let lines = []
-    this.#layout.forEach((item) => {
-      lines = lines.concat(this.#displayComponents(item))
-    })
+    this.#layout.forEach((item) => lines = lines.concat(this.#displayComponents(item)))
     while (lines.length < process.stdout.rows) lines.push('')
     lines.forEach((item, index) => {
       if (item.length > 0) {
@@ -143,15 +144,12 @@ class CLI {
           if (item.substring(i, i+2) === '\x1b[') {
             for (let end = i+2; end < item.length; end++) {
               if (item[end] == 'm') {
-                currentColor = item.substring(i, end)
-                i+=((end-i)-1)
+                currentColor = item.substring(i, end+1)
+                i = end
                 break
               }
             }
-          } else {
-            analysis.push({ string: item[i], color: currentColor })
-            currentColor = ''
-          }
+          } else analysis.push({ string: item[i], color: currentColor })
         }
         while (wcwidth(analysis.map((item) => {return item.string}).join('')) < process.stdout.columns) analysis.push({ string: ' ', color: '' })
         while (wcwidth(analysis.map((item) => {return item.string}).join('')) > process.stdout.columns) analysis.splice(analysis.length-1, 1)
@@ -159,9 +157,7 @@ class CLI {
       }
     })
 
-    let string = lines.join(`\n`)
-
-    process.stdout.write(`\x1B[2J\x1B[3J\x1B[H\x1Bc ${lines.join(`\n${BackgroundColor.reset}`)}`)
+    process.stdout.write(`\x1B[2J\x1B[3J\x1B[H\x1Bc${lines.join(`\n${BackgroundColor.reset}`)}`)
   }
 
   //顯示組件
@@ -170,20 +166,33 @@ class CLI {
     if (name === 'pageTab') {
       lines.push('')
       this.#pages.forEach((item, index) => {
-        if (this.#data.currentPage === index) lines[0]+=` ${this.#style.selectBackground} ${this.#style.selectFont}${item.name} ${this.#style.background} `
-        else lines[0]+=` ${this.#style.notSelectBackground} ${this.#style.notSelectFont}${item.name} ${this.#style.background} `
+        if (!item.hide) {
+          if (this.#data.currentPage === index) lines[0]+=` ${this.#style.selectBackground} ${this.#style.selectFont}${item.name} ${this.#style.background} `
+          else lines[0]+=` ${this.#style.notSelectBackground} ${this.#style.notSelectFont}${item.name} ${this.#style.background} `
+        }
       })
     } else if (name === 'pageContent') {
-      let pageContent = this.#pages[this.#data.currentPage].callback()
-      if (!Array.isArray(pageContent)) throw new Error('參數 callback 必須為一個返回 <array> 的 <function>')
-      for (let i = 0; i < process.stdout.rows-(this.#layout.length-1); i++) {
-        if (i+this.#pages[this.#data.currentPage].scrollY < pageContent.length) lines.push(` ${i+this.#pages[this.#data.currentPage].scrollY+1}｜${pageContent[i+this.#pages[this.#data.currentPage].scrollY]}`)
-        else lines.push('')
+      if (this.#pages[this.#data.currentPage] === undefined) {
+        for (let i = 0; i < process.stdout.rows-(this.#layout.length-1); i++) lines.push('')
+      } else {
+        let pageContent = this.#pages[this.#data.currentPage].callback()
+        if (!Array.isArray(pageContent)) throw new Error('參數 callback 必須為一個返回 <array> 的 <function>')
+        for (let i = 0; i < process.stdout.rows-(this.#layout.length-1); i++) {
+          if (i+this.#pages[this.#data.currentPage].scrollY < pageContent.length) {
+            if (i+this.#pages[this.#data.currentPage].scrollY === this.#pages[this.#data.currentPage].selectY) lines.push(`${this.style.selectBackground}>${this.style.selectFont}${i+this.#pages[this.#data.currentPage].scrollY+1}${BackgroundColor.reset}｜${pageContent[i+this.#pages[this.#data.currentPage].scrollY]}`)
+            else lines.push(` ${i+this.#pages[this.#data.currentPage].scrollY+1}｜${pageContent[i+this.#pages[this.#data.currentPage].scrollY]}`)
+          }
+          else lines.push('')
+        }
       }
     } else if (name === 'input') {
-      if (this.#data.input.length > 0) lines.push(` ${this.#style.selectBackground} ${this.#style.selectFont}${this.#data.input} `)
-      else lines.push(` ${this.#style.notSelectBackground} ${this.#style.notSelectFont}⇦ ⇨ 切換頁面 - ⇧⇩ 滑動頁面 - 打字來輸入內容`)
+      if (this.#data.input.length > 0) lines.push(`${this.#style.selectBackground} ${this.#style.selectFont}${this.#data.input}`)
+      else {
+        if (os.platform() === 'linux' || os.platform() === 'darwin') lines.push(`${this.#style.notSelectBackground} ${this.#style.notSelectFont}⇦ ⇨ 切換頁面 - ⇧⇩ 滑動頁面 - 打字來輸入內容`)
+        else if (os.platform() === 'win32') lines.push(`${this.#style.notSelectBackground} ${this.#style.notSelectFont}← → 切換頁面 -  ↑ ↓ 滑動頁面 - 打字來輸入內容`)
+      }
     } else if (name === 'blank') lines.push('')
+    else if (name === 'background') lines.push(' ')
     return lines
   }
 }
@@ -194,6 +203,7 @@ class Layout {
   static get pageContent () {return 'pageContent'}
   static get input () {return 'input'}
   static get blank () {return 'blank'}
+  static get background () {return 'background'}
 }
 
 //文字顏色
