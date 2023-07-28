@@ -16,12 +16,12 @@ let cli = new CLI()
 
 # 目錄
 * [CLI](#cli)
-  * [setLayout](#setlayout)
-  * [setStyle](#setstyle)
-  * [addPage](#addpage)
-  * [removePage](#removepage)
-  * [setInput](#setinput)
-* [Layout](#layout)
+  * [setLayout()](#setlayout)
+  * [setStyle()](#setstyle)
+  * [addPage()](#addpage)
+  * [removePage()](#removepage)
+  * [setInput()](#setinput)
+* [Layout()](#layout)
 
 # CLI
 ```js
