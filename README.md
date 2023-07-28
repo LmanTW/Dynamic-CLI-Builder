@@ -16,7 +16,7 @@ let cli = new CLI()
 
 # 目錄
 * [CLI](#cli)
-  * [setLayout](#setlayout())
+  * [setLayout](#setlayout)
   * [setStyle](#setstyle)
   * [addPage](#addpage)
 * [Layout](#layout)
@@ -32,6 +32,7 @@ let cli = new CLI() //創建一個 CLI
 .setLayout(layout) //設定 CLI 的佈局
 ```
 * `layout <array>`｜一個包含[佈局碼](#layout)的陣列
+> 預設為 ['pageTab', 'background', 'pageContent', 'background', 'input', 'blank']
 
 # Layout
 ```js
