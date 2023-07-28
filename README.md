@@ -21,7 +21,7 @@ let cli = new CLI()
   * [addPage()](#addpage)
   * [removePage()](#removepage)
   * [setInput()](#setinput)
-* [Layout()](#layout)
+* [Layout](#layout)
 
 # CLI
 ```js
