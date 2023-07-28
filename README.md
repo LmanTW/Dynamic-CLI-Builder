@@ -11,30 +11,18 @@
 const { CLI } = require('./DynamicCliBuilder.js')
 
 let cli = new CLI()
-  .addPage('A Page', () => {return ['這是一頁'])
+  .addPage('A Page', () => {return ['這是第一行', '這是第二行', '這是第三行'])
 ```
 
 #目錄
 * [CLI](#cli)
- * [layout](#layout)
- * [style](#style)
- * [pages](#pages)
- * [data](#data)
- * [setLayout()](#setLayout)
+  * [setLayout](#setlayout)
+  * [setStyle](#setstyle)
+  * [addPage](#addpage)
 
 # CLI
 ```js
 let cli = new CLI() //創建一個 CLI
 ```
 
-## layout
-```js
-cli.layout //取得 CLI 的佈局
-```
-* 返回一個 `<array>`
-
-## style
-```js
-cli.style //取得 CLI 的風格
-```
-* 返回一個 `object`
+## 
