@@ -14,15 +14,29 @@ let cli = new CLI()
   .addPage('A Page', () => {return ['這是第一行', '這是第二行', '這是第三行'])
 ```
 
-#目錄
+# 目錄
 * [CLI](#cli)
-  * [setLayout](#setlayout)
+  * [setLayout](#setlayout())
   * [setStyle](#setstyle)
   * [addPage](#addpage)
+* [Layout](#layout)
 
 # CLI
 ```js
+const { CLI } = require('./DynamicCliBuilder.js')
 let cli = new CLI() //創建一個 CLI
 ```
 
-## 
+## setLayout()
+```js
+.setLayout(layout) //設定 CLI 的佈局
+```
+* `layout <array>`｜一個包含[佈局碼](#layout)的陣列
+
+# Layout
+```js
+const { Layout } = require('./DynamicCliBuilder.js')
+Layout.<佈局名稱> //取得佈局的佈局碼
+```
+
+| - 佈局名稱 - |  - 佈局作用 - |
