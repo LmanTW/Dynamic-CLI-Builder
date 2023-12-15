@@ -27,3 +27,17 @@ let cli = new DynamicCliBuilder(options) //Create a CLI
 .setLayout(layout)
 ```
 * `layout <array>` | An array contained [Layout](#layout)
+
+# Layout
+```js
+const { Layout } = require('./DynamicCliBuilder.js')
+Layout.<name>() //Get Layout Data
+```
+
+| name       | parameter    | description                  |
+| ---        | ---          | ---                          |
+| blank      | ()           | A blank line                 |
+| text       | (content)    | A line of text               |
+| pageTabs   | ()           | A line of page tabs          |
+| pageContent| ()           | Multiple line of page content|
+| input      | (placeholder)| A line of input              |
