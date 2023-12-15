@@ -2,7 +2,7 @@
 A tool in Node.js to build a dynamic CLI.
 
 ## Example
-```
+```js
 const { CLI } = require('./DynamicCliBuilder.js')
 
 let cli = new CLI()
@@ -11,6 +11,9 @@ let cli = new CLI()
 
 ## Contents
 * [DynamicCliBuilder](#dynamicclibuilder)
+  * [pages](#pages)
+  * [input](#input)
+  * [currentPage](#currentpage)
   * [setLayout()](#setlayout)
   * [setStyle()](#setstyle)
   * [addPage()](#addpage)
@@ -26,6 +29,24 @@ let cli = new DynamicCliBuilder(options) //Create a CLI
 * `options <object>`
   * `updateInterval <number>` | The interval between update (display)
  
+## pages
+```js
+.page //Get pages
+```
+return an `<array>` containing page IDs
+
+## input
+```js
+.input //Get input
+```
+return an `<string>`
+
+## currentPage
+```js
+.currentPage //Get current page
+```
+return an `<string>` which is the id of current page
+
 ## setLayout()
 ```js
 .setLayout(layout) //Set the layout of the CLI
