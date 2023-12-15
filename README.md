@@ -12,6 +12,10 @@ let cli = new CLI()
 ## Contents
 * [DynamicCliBuilder](#dynamicclibuilder)
   * [setLayout()](#setlayout)
+  * [setStyle()](#setstyle)
+  * [addPage()](#addpage)
+  * [removePage()](#removepage)
+  * [listen()](#listen)
 * [Layout](#layout)
 
 # DynamicCliBuilder
@@ -24,9 +28,47 @@ let cli = new DynamicCliBuilder(options) //Create a CLI
  
 ## setLayout()
 ```js
-.setLayout(layout)
+.setLayout(layout) //Set the layout of the CLI
 ```
 * `layout <array>` | An array contained [Layout](#layout)
+
+## setStyle()
+```js
+.setStyle(style) //Set the style of the CLI
+```
+* `style <object>` | An object contained "style codes" and colors
+```js
+//Default Style
+{
+  background: BackgroundColor.reset,
+
+  selectBackground: BackgroundColor.white,
+  selectFont: FontColor.gray,
+  notSelectBackground: BackgroundColor.gray,
+  notSelectFont: FontColor.white
+}
+```
+
+## addPage()
+```js
+.addPage(id, name, callback) //Add page
+```
+* `id <string>` | The id of the page
+* `name <string>` | The name of the page
+* `callback <function>` | The callback function to get page content (this function must return an array)
+
+## removePage()
+```js
+.removePage(id) //Remove page
+```
+* `id <string>` | The id of the page
+
+## listen()
+```js
+.listen(name, callback) //Listen to event
+```
+* `name <string>` | The name of the event
+* `callback <function>` | The callback of the event
 
 # Layout
 ```js
