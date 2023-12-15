@@ -324,8 +324,3 @@ const keys = {
   'backspace': '7f',
   'exit': '03'
 }
-
-let logs = []
-
-let cli = new DynamicCliBuilder()
-  .addPage('Logs', 'Logs', () => logs)
