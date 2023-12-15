@@ -1,10 +1,9 @@
 const readline = require('readline')
 const wcwidth = require('wcwidth')
-const os = require('os')
 
-//CLI
-class CLI {
-  #layout = [Layout.pageTab, Layout.background, Layout.pageContent, Layout.background, Layout.input, Layout.blank]
+//Dynamic CLI Builder
+class DynamicCliBuilder {
+  #layout = [Layout.pageTabs(), Layout.blank(), Layout.pageContent(), Layout.blank(), Layout.input()]
   #style = {
     background: BackgroundColor.reset,
 
@@ -13,263 +12,320 @@ class CLI {
     notSelectBackground: BackgroundColor.gray,
     notSelectFont: FontColor.white
   }
-  #pages = []
+
+  #pages = {}
+
+  #events = {}
 
   #data = {
-    events: {},
-    currentPage: 0,
-    input: ''
+    input: '',
+    currentPage: undefined
   }
 
-  constructor () {
-    let stream = readline.createInterface({
+  constructor (options) {
+    options = Object.assign({
+      updateInterval: 50
+    }, (options === undefined) ? {} : options)
+
+    readline.createInterface({
       input: process.stdin,
       output: process.stdout
     })
 
-    process.stdin.on('data', (data) => {
-      if (data.toString('hex') === '0d') {
-        this.#callEvent('enter', this.#data.input)
-        this.#data.input = ''
-      } else if (data.toString('hex') === '7f') this.#data.input = this.#data.input.substring(0, this.#data.input.length-1)
-      else if (data.toString('hex') === '1b5b44') this.#data.currentPage--
-      else if (data.toString('hex') === '1b5b43') this.#data.currentPage++
-      else if (data.toString('hex') === '1b5b41') {
-        if (this.#pages[this.#data.currentPage].selectY > 0) this.#pages[this.#data.currentPage].selectY--
-        if (this.#pages[this.#data.currentPage].selectY <= this.#pages[this.#data.currentPage].scrollY) this.#pages[this.#data.currentPage].scrollY = this.#pages[this.#data.currentPage].selectY
-      } else if (data.toString('hex') === '1b5b42') {
-        let pageContent = this.#pages[this.#data.currentPage].callback()
-        if (!Array.isArray(pageContent)) throw new Error('參數 callback 必須為一個返回 <array> 的 <function>')
-        if (this.#pages.length > 0 && this.#pages[this.#data.currentPage].selectY < pageContent.length-1) this.#pages[this.#data.currentPage].selectY++
-        if (this.#pages[this.#data.currentPage].selectY > this.#pages[this.#data.currentPage].scrollY+(process.stdout.rows-this.#layout.length)) this.#pages[this.#data.currentPage].scrollY++
-      } else if (data.toString('hex') !== '09') {
-        this.#data.input+=data.toString('utf8')
-        this.#callEvent('input', data.toString('utf8'))
-      }
-      this.#callEvent('keyPress', data)
+    process.stdin.on('data', (data) => this.#inputHandler(data))
 
-      if (this.#data.currentPage >= this.#pages.length) this.#data.currentPage = 0
-      else if (this.#data.currentPage < 0) this.#data.currentPage = this.#pages.length-1
-    })
-
-    stream.on('close', () => {})
-
-    setInterval(() => this.#display(), 150)
+    setInterval(() => {
+      this.#display()
+    }, options.updateInterval)
   }
 
-  get layout () {return this.#layout}
-  get style () {return this.#style}
-  get pages () {return this.#pages}
-  get data () {return this.#data}
+  get input () {this.#data.input}
+  get currentPage () {this.#data.currentPage}
 
-  //設定佈局
+  //Set Layout
   setLayout (layout) {
-    if (!Array.isArray(layout)) throw new Error('參數 layout 必須為一個 <array>')
-    if (layout.filter((item) => item === 'pageContent').length > 1) throw new Error(`佈局中最多只能有一個 pagetContent`)
     layout.forEach((item) => {
-      if (item !== 'pageTab' && item !== 'pageContent' && item !== 'input' && item !== 'blank' && item !== 'background') throw new Error(`找不到佈局 ${item}`)
+      if (!['blank', 'text', 'pageTabs', 'pageContent', 'input'].includes(item.type)) throw new Error(`Layout Type Not Found: ${item.type}`)
     })
+
     this.#layout = layout
-    return this
   }
 
-  //設定風格
+  //Set Style
   setStyle (style) {
-    if (typeof style !== 'object') throw new Error('參數 style 必須為一個 <object>')
-    this.#style = style
+    this.#style = Object.assign(this.#style, style)
+  }
+
+  //Add Page
+  addPage (id, name, callback) {
+    if (this.#pages[id] !== undefined) throw new Error(`Page With ID "${id}" Already Exist`)
+    if (!Array.isArray(callback())) throw new Error(`Callback Must Return An Array`)
+
+    if (Object.keys(this.#pages).length < 1) this.#data.currentPage = id 
+
+    this.#pages[id] = { name, callback, cursorY: 0, scrollY: 0 }
+
     return this
   }
 
-  //添加頁面
-  addPage (name, callback, hide) {
-    if (typeof name !== 'string') throw new Error(`參數 name 必須為一個 <string>`)
-    if (typeof callback !== 'function') throw new Error(`參數 callback 必須為一個 <function>`)
-    this.#pages.forEach((item) => {
-      if (item.name === name) throw new Error(`已有名為 ${name} 的頁面`)
-    })
-    this.#pages.push({ name, callback, hide: (hide === undefined) ? false : hide, selectY: 0, scrollY: 0 })
-    return this
+  //Remove Page
+  removePage (id) {
+    if (this.#pages[id] === undefined) throw new Error(`Page Not Found: ${id}`)
+
+    if (this.#data.currentPage === id) this.#data.currentPage = Object.keys(this.#pages)[0]
+
+    delete this.#pages[id]
   }
 
-  //移除頁面
-  removePage (name) {
-    for (let i = 0; i < this.#pages.length; i++) {
-      if (this.#pages[i].name === name) {
-        this.#pages.splice(i, 1)
-        return this
-      }
-    }
-    throw new Error(`找不到名為 ${name} 的頁面`)
+  //Listen To Event
+  listen (name, callback) {
+    if (this.#events[name] === undefined) this.#events[name] = []
+
+    this.#events[name].push(callback)
   }
 
-  //切換頁面
-  switchPage (index) {
-    if (index >= this.#pages.length) index = 0
-    else if (index < 0) index = this.#pages.length-1
-    this.#data.currentPage = index
-    return this
-  }
-
-  //設定輸入
-  setInput (string) {
-    if (typeof string !== 'string') throw new Error('參數 string 必須為一個 <string>')
-    this.#data.input = string
-  }
-
-  //聆聽事件
-  event (name, callback) {
-    if (typeof callback !== 'function') throw new Error('參數 <callback> 必須為一個 <function>')
-    if (this.#data.events[name] === undefined) this.#data.events[name] = []
-    this.#data.events[name].push(callback)
-    return this
-  }
-
-  //呼叫事件
   #callEvent (name, data) {
-    if (this.#data.events[name] !== undefined) {
-      this.#data.events[name].forEach((item) => item(data))
-    }
+    if (this.#events[name] !== undefined) this.#events[name].forEach((item) => item(data))
   }
 
-  //顯示
+  //Display
   #display () {
     let lines = []
-    this.#layout.forEach((item) => lines = lines.concat(this.#displayComponents(item)))
-    while (lines.length < process.stdout.rows) lines.push('')
-    lines.forEach((item, index) => {
-      if (item.length > 0) {
-        let analysis = []
-        let currentColor = ''
-        for (let i = 0; i < item.length; i++) {
-          if (item.substring(i, i+2) === '\x1b[') {
-            for (let end = i+2; end < item.length; end++) {
-              if (item[end] == 'm') {
-                currentColor = item.substring(i, end+1)
-                i = end
-                break
-              }
-            }
-          } else analysis.push({ string: item[i], color: currentColor })
+
+    this.#layout.forEach((item) => lines = lines.concat(this.#displayComponent(item)))
+
+    lines = lines.slice(0, process.stdout.rows-1).map((item) => {
+      let planTextData = sperateColorCode(item)
+      let planText = planTextData.map((item) => item.text).join('')
+
+      if (wcwidth(planText) < process.stdout.columns) planTextData.push({ color: this.#style.background, text: ' '.repeat(process.stdout.columns-wcwidth(planText)) })
+      else if (wcwidth(planText) > process.stdout.columns) {
+        while (wcwidth(planText) > process.stdout.columns) {
+          planTextData = planTextData.slice(0, planTextData.length-1)
+          planText = planText.substring(0, planText.length-1)
         }
-        while (wcwidth(analysis.map((item) => {return item.string}).join('')) < process.stdout.columns) analysis.push({ string: ' ', color: '' })
-        while (wcwidth(analysis.map((item) => {return item.string}).join('')) > process.stdout.columns) analysis.splice(analysis.length-1, 1)
-        lines[index] = `${this.#style.background}${analysis.map((item) => {return `${item.color}${item.string}`}).join('')}`
       }
+
+      return `${this.#style.background}${planTextData.map((item2) => (item2.color === undefined) ? item2.text : `${item2.color}${item2.text}`).join('')}`
     })
 
-    process.stdout.write(`\x1B[2J\x1B[3J\x1B[H\x1Bc${lines.join(`\n${BackgroundColor.reset}`)}`)
+    process.stdout.write(`\x1B[2J\x1B[3J\x1B[H\x1Bc${lines.join('\n')}\n${FontColor.reset}`)
   }
 
-  //顯示組件
-  #displayComponents (name) {
-    let lines = []
-    if (name === 'pageTab') {
-      lines.push('')
-      this.#pages.forEach((item, index) => {
-        if (!item.hide) {
-          if (this.#data.currentPage === index) lines[0]+=` ${this.#style.selectBackground} ${this.#style.selectFont}${item.name} ${this.#style.background} `
-          else lines[0]+=` ${this.#style.notSelectBackground} ${this.#style.notSelectFont}${item.name} ${this.#style.background} `
-        }
+  //Display Component
+  #displayComponent (data) {
+    if (data.type === 'blank') return [this.#style.background] 
+    if (data.type === 'text') return [data.content]
+    if (data.type === 'pageTabs') {
+      let tabs = []
+
+      Object.keys(this.#pages).forEach((item) => {
+        if (item === this.#data.currentPage) tabs.push(`${this.#style.selectBackground} ${this.#style.selectFont}${this.#pages[item].name} ${this.#style.background}`)
+        else tabs.push(`${this.#style.notSelectBackground} ${this.#style.notSelectFont}${this.#pages[item].name} ${this.#style.background}`)
       })
-    } else if (name === 'pageContent') {
-      if (this.#pages[this.#data.currentPage] === undefined) {
-        for (let i = 0; i < process.stdout.rows-(this.#layout.length-1); i++) lines.push('')
-      } else {
-        let pageContent = this.#pages[this.#data.currentPage].callback()
-        if (!Array.isArray(pageContent)) throw new Error('參數 callback 必須為一個返回 <array> 的 <function>')
-        for (let i = 0; i < process.stdout.rows-(this.#layout.length-1); i++) {
-          if (i+this.#pages[this.#data.currentPage].scrollY < pageContent.length) {
-            if (i+this.#pages[this.#data.currentPage].scrollY === this.#pages[this.#data.currentPage].selectY) lines.push(`${this.style.selectBackground}>${this.style.selectFont}${i+this.#pages[this.#data.currentPage].scrollY+1}${BackgroundColor.reset}｜${pageContent[i+this.#pages[this.#data.currentPage].scrollY]}`)
-            else lines.push(` ${i+this.#pages[this.#data.currentPage].scrollY+1}｜${pageContent[i+this.#pages[this.#data.currentPage].scrollY]}`)
-          }
-          else lines.push('')
-        }
+
+      return [` ${tabs.join(' ')} `]
+    }
+    if (data.type === 'pageContent') {
+      let lines = []
+
+      let pageData = this.#pages[this.#data.currentPage].callback()
+
+      for (let i = this.#pages[this.#data.currentPage].scrollY; i < this.#pages[this.#data.currentPage].scrollY+(process.stdout.rows-this.#layout.length) && i < pageData.length; i++) {
+        let lineNumber = ((i+1).toString().length > 1) ? (i+1).toString() : ` ${(i+1).toString()}`
+
+        if (this.#pages[this.#data.currentPage].cursorY === i) lines.push(`${this.#style.selectBackground} ${this.#style.selectFont}${lineNumber}${FontColor.reset}${this.#style.background} | ${pageData[i]}`)
+        else lines.push(` ${lineNumber} | ${pageData[i]}`)
       }
-    } else if (name === 'input') {
-      if (this.#data.input.length > 0) lines.push(`${this.#style.selectBackground} ${this.#style.selectFont}${this.#data.input}`)
+
+      if (lines.length < process.stdout.rows-this.#layout.length) {
+        while (lines.length < process.stdout.rows-this.#layout.length) lines.push('')
+      }
+
+      if (this.#pages[this.#data.currentPage].cursorY > pageData.length) {
+        this.#pages[this.#data.currentPage].cursorY = pageData.length-1
+        this.#pages[this.#data.currentPage].scrollY = pageData.length-(process.stdout.rows-this.#layout.length)
+        
+        if (this.#pages[this.#data.currentPage].scrollY < 0) this.#pages[this.#data.currentPage].scrollY = 0
+      }
+
+      return lines
+    }
+    if (data.type === 'input') {
+      let string = ` ${(this.#data.input.length > 0) ? `${this.#style.selectBackground}${this.#style.selectFont}` : `${this.#style.notSelectBackground}${this.#style.notSelectFont}`} `
+
+      if (this.#data.input.length > 0) string+=this.#data.input
       else {
-        if (os.platform() === 'linux' || os.platform() === 'darwin') lines.push(`${this.#style.notSelectBackground} ${this.#style.notSelectFont}⇦ ⇨ 切換頁面 - ⇧⇩ 滑動頁面 - 打字來輸入內容`)
-        else if (os.platform() === 'win32') lines.push(`${this.#style.notSelectBackground} ${this.#style.notSelectFont}← → 切換頁面 -  ↑ ↓ 滑動頁面 - 打字來輸入內容`)
+        if (data.placeholder === undefined) string+=`⇧⇩ Scroll | ⇦⇨ Switch Page | Type to give input`
+        else string+=data.placeholder
       }
-    } else if (name === 'blank') lines.push('')
-    else if (name === 'background') lines.push(' ')
-    return lines
+
+      string+=' '.repeat(process.stdout.columns-wcwidth(sperateColorCode(string).map((item) => item.text).join('')+' '))
+      string+=this.#style.background
+    
+      return string
+    }
+  }
+
+  //Input Handler
+  #inputHandler (data) {
+    if ([keys.upArrow, keys.downArrow, keys.leftArrow, keys.rightArrow].includes(data.toString('hex'))) {
+      let page = this.#pages[this.#data.currentPage]
+
+      if (page === undefined) return
+
+      if (data.toString('hex') === keys.upArrow) {
+        if (page.cursorY > page.scrollY) page.cursorY--
+        else if (page.scrollY > 0) {
+          page.cursorY--
+          page.scrollY--
+        }
+      } else if (data.toString('hex') === keys.downArrow) {
+        let pageData = page.callback()
+
+        if (page.cursorY-page.scrollY < (process.stdout.rows-this.#layout.length)-1 && page.cursorY < pageData.length-1) page.cursorY++
+        else if (page.cursorY < pageData.length-1) {
+          page.cursorY++
+          page.scrollY++
+        }
+
+        logs[0] = `${page.cursorY}, ${page.callback().length-1}`
+      } else if (data.toString('hex') === keys.leftArrow) {
+        let pages = Object.keys(this.#pages)
+
+        if (pages.indexOf(this.#data.currentPage) < 1) this.#data.currentPage = pages[pages.length-1]
+        else this.#data.currentPage = pages[pages.indexOf(this.#data.currentPage)-1]
+
+        this.#callEvent('switchPage', this.#data.currentPage)
+      } else if (data.toString('hex') === keys.rightArrow) {
+        let pages = Object.keys(this.#pages)
+
+        if (pages.indexOf(this.#data.currentPage) > pages.length-2) this.#data.currentPage = pages[0]
+        else this.#data.currentPage = pages[pages.indexOf(this.#data.currentPage)+1]
+
+        this.#callEvent('switchPage', this.#data.currentPage)
+      }
+    } else if (data.toString('hex') === keys.enter) {
+      this.#callEvent('enter', this.#data.input)
+
+      this.#data.input = ''
+    } else if (data.toString('hex') === keys.backspace) {
+      this.#callEvent('input', data)
+ 
+      if (this.#data.input.length > 0) this.#data.input = this.#data.input.substring(0, this.#data.input.length-1)
+    } else {
+      this.#callEvent('input', data)
+
+      this.#data.input+=data.toString().replaceAll('\n')
+    }
   }
 }
 
-//佈局
-class Layout {
-  static get pageTab () {return 'pageTab'}
-  static get pageContent () {return 'pageContent'}
-  static get input () {return 'input'}
-  static get blank () {return 'blank'}
-  static get background () {return 'background'}
+//Separate Color Code From Text
+function sperateColorCode (text) {
+  let letters = []
+  let color
+
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === '\x1b') {
+      if (color === undefined) color = ''
+
+      while (text[i] !== 'm') {
+        color+=text[i]
+
+        i++
+      }
+
+      color+='m'
+    } else {
+      if (color === undefined) letters.push({ text: text[i] })
+      else {
+        letters.push({ color, text: text[i] })
+
+        color = undefined
+      }
+    }
+  }
+
+  return letters
 }
 
-//文字顏色
+//Layout
+class Layout {
+  static blank () {return { type: 'blank' }}
+  static text (content) {return { type: 'text', content }}
+  static pageTabs () {return { type: 'pageTabs' }}
+  static pageContent () {return { type: 'pageContent' }}
+  static input (placeholder) {return { type: 'input', placeholder }}
+}
+
+//Font Color
 class FontColor {
-  //紅色
+  static get reset () {return '\x1b[0m'}
+
   static get red () {return '\x1b[31m'}
   static get brightRed () {return '\x1b[92m'}
 
-  //黃色
   static get yellow () {return '\x1b[33m'}
   static get brightYellow () {return '\x1b[93m'}
 
-  //綠色
   static get green () {return '\x1b[32m'}
   static get brightGreen () {return '\x1b[92m'}
 
-  //青色
   static get cyan () {return '\x1b[36m'}
   static get brightCyan () {return '\x1b[96m'}
 
-  //藍色
   static get blue () {return '\x1b[34m'}
   static get brightBlue () {return '\x1b[94m'}
 
-  //紫色
   static get purple () {return '\x1b[35m'}
   static get brightPurple () {return '\x1b[95m'}
 
-  //黑白灰色
   static get white () {return '\x1b[97m'}
   static get black () {return '\x1b[30m'}
   static get gray () {return '\x1b[90m'}
 }
 
-//背景顏色
+//Background Color
 class BackgroundColor {
   static get reset () {return '\x1b[0m'}
 
-  //紅色
   static get red () {return '\x1b[41m'}
   static get brightRed () {return '\x1b[101m'}
 
-  //黃色
   static get yellow () {return '\x1b[43m'}
   static get brightYellow () {return '\x1b[103m'}
 
-  //綠色
   static get green () {return '\x1b[42m'}
   static get brightGreen () {return '\x1b[102m'}
 
-  //青色
   static get cyan () {return '\x1b[46m'}
   static get brightCyan () {return '\x1b[106m'}
 
-  //藍色
   static get blue () {return '\x1b[44m'}
   static get brightBlue () {return '\x1b[104m'}
 
-  //紫色
   static get purple () {return '\x1b[45m'}
   static get brightPurple () {return '\x1b[105m'}
 
-  //黑白灰色
   static get white () {return '\x1b[107m'}
   static get black () {return '\x1b[40m'}
   static get gray () {return '\x1b[100m'}
 }
 
-module.exports = { CLI, Layout, FontColor, BackgroundColor }
+module.exports = { DynamicCliBuilder, Layout, FontColor, BackgroundColor }
+
+const keys = {
+  'upArrow': '1b5b41',
+  'downArrow': '1b5b42',
+  'leftArrow': '1b5b44',
+  'rightArrow': '1b5b43',
+  'enter': '0d',
+  'backspace': '7f',
+  'exit': '03'
+}
+
+let logs = []
+
+let cli = new DynamicCliBuilder()
+  .addPage('Logs', 'Logs', () => logs)
