@@ -39,6 +39,7 @@ class DynamicCliBuilder {
     }, options.updateInterval)
   }
 
+  get pages () {return Object.keys(this.#pages)}
   get input () {this.#data.input}
   get currentPage () {this.#data.currentPage}
 
