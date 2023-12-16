@@ -24,6 +24,8 @@ let cli = new CLI()
   * [removePage()](#removepage)
   * [listen()](#listen)
 * [Layout](#layout)
+* [FontColor](#fontcolor)
+* [BackgroundColor](#backgroundcolor)
 
 # DynamicCliBuilder
 ```js
@@ -98,7 +100,7 @@ return an `<string>` which is the id of current page
 # Layout
 ```js
 const { Layout } = require('./DynamicCliBuilder.js')
-Layout.<name>() //Get Layout Data
+Layout.<name>() //Get layout data
 ```
 
 | name       | parameter    | description                  |
@@ -108,3 +110,51 @@ Layout.<name>() //Get Layout Data
 | pageTabs   | ()           | A line of page tabs          |
 | pageContent| ()           | Multiple line of page content|
 | input      | (placeholder)| A line of input              |
+
+# FontColor
+```js
+const { FontColor } = require('./DynamicCliBuilder.js')
+FontColor.<name> //Get color code
+```
+| name        | code    |
+| ---         | ---     |
+| reset       | \x1b[0m |
+| red         | \x1b[31m|
+| brightRed   | \x1b[92m|
+| yellow      | \x1b[33m|
+| brightYellow| \x1b[93m|
+| green       | \x1b[32m|
+| brightGreen | \x1b[92m|
+| cyan        | \x1b[36m|
+| brightCyan  | \x1b[96m|
+| blue        | \x1b[34m|
+| brightBlue  | \x1b[94m|
+| purple      | \x1b[35m|
+| brightPurple| \x1b[95m|
+| white       | \x1b[97m|
+| black       | \x1b[30m|
+| gray        | \x1b[90m|
+
+# BackgroundColor
+```js
+const { BackgroundColor } = require('./DynamicCliBuilder.js')
+BackgroundColor.<name> //Get color code
+```
+| name        | code     |
+| ---         | ---      |
+| reset       | \x1b[0m  |
+| red         | \x1b[41m |
+| brightRed   | \x1b[101m|
+| yellow      | \x1b[43m |
+| brightYellow| \x1b[103m|
+| green       | \x1b[42m |
+| brightGreen | \x1b[102m|
+| cyan        | \x1b[46m |
+| brightCyan  | \x1b[106m|
+| blue        | \x1b[44m |
+| brightBlue  | \x1b[104m|
+| purple      | \x1b[45m |
+| brightPurple| \x1b[105m|
+| white       | \x1b[107m |
+| black       | \x1b[40m |
+| gray        | \x1b[100m |
