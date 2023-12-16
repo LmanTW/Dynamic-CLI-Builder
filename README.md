@@ -97,6 +97,20 @@ return an `<string>` which is the id of current page
 * `name <string>` | The name of the event
 * `callback <function>` | The callback of the event
 
+### Example
+```js
+.listen('switchPage', (pageID) => {
+  ...Do something
+})
+```
+
+### Events
+| name       | callback data | description                       |
+| ---        | ---           | ---                               |
+| switchPage | (pageID)      | Triggered when user switches pages|
+| enter      | (input)       | Triggered when user press enter   |
+| input      | (key)         | Triggered when user input         |
+
 # Layout
 ```js
 const { Layout } = require('./DynamicCliBuilder.js')
