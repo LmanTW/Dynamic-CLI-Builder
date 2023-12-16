@@ -189,8 +189,6 @@ class DynamicCliBuilder {
           page.cursorY++
           page.scrollY++
         }
-
-        logs[0] = `${page.cursorY}, ${page.callback().length-1}`
       } else if (data.toString('hex') === keys.leftArrow) {
         let pages = Object.keys(this.#pages)
 
