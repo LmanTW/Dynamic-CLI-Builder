@@ -6,7 +6,7 @@ A tool in Node.js to build a dynamic CLI.
 const { CLI } = require('./DynamicCliBuilder.js')
 
 let cli = new CLI()
-  .addPage('page1', 'A Page', () => {return ['Apple', 'Banana', 'Orange'])
+  .addPage('page1', 'A Page', () => ['Apple', 'Banana', 'Orange'])
 ```
 
 ## Dependence
