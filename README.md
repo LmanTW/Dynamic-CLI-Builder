@@ -100,7 +100,7 @@ return an `<string>` which is the id of current page
 ### Example
 ```js
 .listen('switchPage', (pageID) => {
-  ...Do something
+  //Do something
 })
 ```
 
