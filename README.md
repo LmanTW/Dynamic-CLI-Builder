@@ -9,6 +9,10 @@ let cli = new CLI()
   .addPage('page1', 'A Page', () => {return ['Apple', 'Banana', 'Orange'])
 ```
 
+## Dependence
+* [wcwidth](https://www.npmjs.com/package/wcwidth)
+* [readline](https://www.npmjs.com/package/readline)
+
 ## Contents
 * [DynamicCliBuilder](#dynamicclibuilder)
   * [pages](#pages)
