@@ -44,6 +44,7 @@ return an `<array>` containing page IDs
 ## input
 ```js
 .input //Get input
+.input = <string> //Set input
 ```
 return an `<string>`
 
@@ -117,13 +118,13 @@ const { Layout } = require('./DynamicCliBuilder.js')
 Layout.<name>() //Get layout data
 ```
 
-| name       | parameter    | description                  |
-| ---        | ---          | ---                          |
-| blank      | ()           | A blank line                 |
-| text       | (content)    | A line of text               |
-| pageTabs   | ()           | A line of page tabs          |
-| pageContent| ()           | Multiple line of page content|
-| input      | (placeholder)| A line of input              |
+| name       | parameter    | description                                                     |
+| ---        | ---          | ---                                                             |
+| blank      | ()           | A blank line                                                    |
+| text       | (callback)   | A line of text, callback must be a function that return a string|
+| pageTabs   | ()           | A line of page tabs                                             |
+| pageContent| ()           | Multiple line of page content                                   |
+| input      | (placeholder)| A line of input                                                 |
 
 # FontColor
 ```js
