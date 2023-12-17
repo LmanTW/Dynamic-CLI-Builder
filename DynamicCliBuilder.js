@@ -43,6 +43,8 @@ class DynamicCliBuilder {
   get input () {this.#data.input}
   get currentPage () {this.#data.currentPage}
 
+  set input (data) {this.#data.input = data}
+
   //Set Layout
   setLayout (layout) {
     layout.forEach((item) => {
