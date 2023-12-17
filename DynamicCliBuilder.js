@@ -1,7 +1,7 @@
 const readline = require('readline')
 const wcwidth = require('wcwidth')
 
-//Dynamic CLI Builder
+// Dynamic CLI Builder
 class DynamicCliBuilder {
   #layout = [Layout.pageTabs(), Layout.blank(), Layout.pageContent(), Layout.blank(), Layout.input()]
   #style = {
@@ -45,21 +45,25 @@ class DynamicCliBuilder {
 
   set input (data) {this.#data.input = data}
 
-  //Set Layout
+  // Set Layout
   setLayout (layout) {
     layout.forEach((item) => {
       if (!['blank', 'text', 'pageTabs', 'pageContent', 'input'].includes(item.type)) throw new Error(`Layout Type Not Found: ${item.type}`)
     })
 
     this.#layout = layout
+
+    return this
   }
 
-  //Set Style
+  // Set Style
   setStyle (style) {
     this.#style = Object.assign(this.#style, style)
+
+    return this
   }
 
-  //Add Page
+  // Add Page
   addPage (id, name, callback) {
     if (this.#pages[id] !== undefined) throw new Error(`Page With ID "${id}" Already Exist`)
     if (!Array.isArray(callback())) throw new Error(`Callback Must Return An Array`)
@@ -71,27 +75,31 @@ class DynamicCliBuilder {
     return this
   }
 
-  //Remove Page
+  // Remove Page
   removePage (id) {
     if (this.#pages[id] === undefined) throw new Error(`Page Not Found: ${id}`)
 
     if (this.#data.currentPage === id) this.#data.currentPage = Object.keys(this.#pages)[0]
 
     delete this.#pages[id]
+
+    return this
   }
 
-  //Listen To Event
+  // Listen To Event
   listen (name, callback) {
     if (this.#events[name] === undefined) this.#events[name] = []
 
     this.#events[name].push(callback)
+
+    return this
   }
 
   #callEvent (name, data) {
     if (this.#events[name] !== undefined) this.#events[name].forEach((item) => item(data))
   }
 
-  //Display
+  // Display
   #display () {
     let lines = []
 
@@ -115,7 +123,7 @@ class DynamicCliBuilder {
     process.stdout.write(`\x1B[2J\x1B[3J\x1B[H\x1Bc${lines.join('\n')}\n${FontColor.reset}`)
   }
 
-  //Display Component
+  // Display Component
   #displayComponent (data) {
     if (data.type === 'blank') return [this.#style.background] 
     if (data.type === 'text') return [data.callback()]
@@ -170,7 +178,7 @@ class DynamicCliBuilder {
     }
   }
 
-  //Input Handler
+  // Input Handler
   #inputHandler (data) {
     if ([keys.upArrow, keys.downArrow, keys.leftArrow, keys.rightArrow].includes(data.toString('hex'))) {
       let page = this.#pages[this.#data.currentPage]
@@ -222,7 +230,7 @@ class DynamicCliBuilder {
   }
 }
 
-//Separate Color Code From Text
+// Separate Color Code From Text
 function sperateColorCode (text) {
   let letters = []
   let color
@@ -251,7 +259,7 @@ function sperateColorCode (text) {
   return letters
 }
 
-//Layout
+// Layout
 class Layout {
   static blank () {return { type: 'blank' }}
   static text (callback) {return { type: 'text', callback }}
@@ -260,7 +268,7 @@ class Layout {
   static input (placeholder) {return { type: 'input', placeholder }}
 }
 
-//Font Color
+// Font Color
 class FontColor {
   static get reset () {return '\x1b[0m'}
 
@@ -287,7 +295,7 @@ class FontColor {
   static get gray () {return '\x1b[90m'}
 }
 
-//Background Color
+// Background Color
 class BackgroundColor {
   static get reset () {return '\x1b[0m'}
 
