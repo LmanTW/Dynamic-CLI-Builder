@@ -116,7 +116,7 @@ class DynamicCliBuilder {
   //Display Component
   #displayComponent (data) {
     if (data.type === 'blank') return [this.#style.background] 
-    if (data.type === 'text') return [data.content]
+    if (data.type === 'text') return [data.callback()]
     if (data.type === 'pageTabs') {
       let tabs = []
 
@@ -252,7 +252,7 @@ function sperateColorCode (text) {
 //Layout
 class Layout {
   static blank () {return { type: 'blank' }}
-  static text (content) {return { type: 'text', content }}
+  static text (callback) {return { type: 'text', callback }}
   static pageTabs () {return { type: 'pageTabs' }}
   static pageContent () {return { type: 'pageContent' }}
   static input (placeholder) {return { type: 'input', placeholder }}
