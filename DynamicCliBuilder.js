@@ -40,8 +40,8 @@ class DynamicCliBuilder {
   }
 
   get pages () {return Object.keys(this.#pages)}
-  get input () {this.#data.input}
-  get currentPage () {this.#data.currentPage}
+  get input () {return this.#data.input}
+  get currentPage () {return this.#data.currentPage}
 
   set input (data) {this.#data.input = data}
 
@@ -126,7 +126,7 @@ class DynamicCliBuilder {
   // Display Component
   #displayComponent (data) {
     if (data.type === 'blank') return [this.#style.background] 
-    if (data.type === 'text') return [data.callback()]
+    if (data.type === 'text') return [data.callback().replaceAll('\n', '\\n')]
     if (data.type === 'pageTabs') {
       let tabs = []
 
@@ -145,8 +145,8 @@ class DynamicCliBuilder {
       for (let i = this.#pages[this.#data.currentPage].scrollY; i < this.#pages[this.#data.currentPage].scrollY+(process.stdout.rows-this.#layout.length) && i < pageData.length; i++) {
         let lineNumber = ((i+1).toString().length > 1) ? (i+1).toString() : ` ${(i+1).toString()}`
 
-        if (this.#pages[this.#data.currentPage].cursorY === i) lines.push(`${this.#style.selectBackground} ${this.#style.selectFont}${lineNumber}${FontColor.reset}${this.#style.background} | ${pageData[i]}`)
-        else lines.push(` ${lineNumber} | ${pageData[i]}`)
+        if (this.#pages[this.#data.currentPage].cursorY === i) lines.push(`${this.#style.selectBackground} ${this.#style.selectFont}${lineNumber}${FontColor.reset}${this.#style.background} | ${pageData[i].replaceAll('\n', '\\n')}`)
+        else lines.push(` ${lineNumber} | ${pageData[i].replaceAll('\n', '\\n')}`)
       }
 
       if (lines.length < process.stdout.rows-this.#layout.length) {
@@ -215,17 +215,21 @@ class DynamicCliBuilder {
         this.#callEvent('switchPage', this.#data.currentPage)
       }
     } else if (data.toString('hex') === keys.enter) {
-      this.#callEvent('enter', this.#data.input)
+      if (this.#data.input === '') {
+        if (this.#pages[this.#data.currentPage] !== undefined) this.#callEvent('select', { page: this.#data.currentPage, cursorY: this.#pages[this.#data.currentPage].cursorY })
+      } else {
+        this.#callEvent('enter', this.#data.input)
 
-      this.#data.input = ''
+        this.#data.input = ''
+      }
     } else if (data.toString('hex') === keys.backspace) {
       this.#callEvent('input', data)
  
       if (this.#data.input.length > 0) this.#data.input = this.#data.input.substring(0, this.#data.input.length-1)
     } else {
-      this.#callEvent('input', data)
-
       this.#data.input+=data.toString().replaceAll('\n')
+
+      this.#callEvent('input', data)
     }
   }
 }
@@ -239,7 +243,7 @@ function sperateColorCode (text) {
     if (text[i] === '\x1b') {
       if (color === undefined) color = ''
 
-      while (text[i] !== 'm') {
+      while (text[i] !== 'm' && i < text.length) {
         color+=text[i]
 
         i++
