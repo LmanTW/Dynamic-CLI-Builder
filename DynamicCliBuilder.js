@@ -86,6 +86,13 @@ class DynamicCliBuilder {
     return this
   }
 
+  // Switch Page
+  switchPage(id) {
+    if (this.#pages[id] === undefined) throw new Error(`Page Not Found: ${id}`)
+
+    this.#data.currentPage = id
+  }
+
   // Listen To Event
   listen (name, callback) {
     if (this.#events[name] === undefined) this.#events[name] = []
@@ -110,8 +117,8 @@ class DynamicCliBuilder {
       let planText = planTextData.map((item) => item.text).join('')
 
       if (wcwidth(planText) < process.stdout.columns) planTextData.push({ color: this.#style.background, text: ' '.repeat(process.stdout.columns-wcwidth(planText)) })
-      else if (wcwidth(planText) > process.stdout.columns) {
-        while (wcwidth(planText) > process.stdout.columns) {
+      else if (wcwidth(planText)+(getNewlineAmount(planText)*2) > process.stdout.columns) {
+        while (wcwidth(planText)+(getNewlineAmount(planText)*2) > process.stdout.columns) {
           planTextData = planTextData.slice(0, planTextData.length-1)
           planText = planText.substring(0, planText.length-1)
         }
@@ -120,13 +127,13 @@ class DynamicCliBuilder {
       return `${this.#style.background}${planTextData.map((item2) => (item2.color === undefined) ? item2.text : `${item2.color}${item2.text}`).join('')}`
     })
 
-    process.stdout.write(`\x1B[2J\x1B[3J\x1B[H\x1Bc${lines.join('\n')}\n${FontColor.reset}`)
+    process.stdout.write(`\x1B[2J\x1B[3J\x1B[H\x1Bc${lines.map((item) => item.replaceAll('\n', '\\n')).join('\n')}\n${FontColor.reset}`)
   }
 
   // Display Component
   #displayComponent (data) {
     if (data.type === 'blank') return [this.#style.background] 
-    if (data.type === 'text') return [data.callback().replaceAll('\n', '\\n')]
+    if (data.type === 'text') return [data.callback()]
     if (data.type === 'pageTabs') {
       let tabs = []
 
@@ -145,8 +152,8 @@ class DynamicCliBuilder {
       for (let i = this.#pages[this.#data.currentPage].scrollY; i < this.#pages[this.#data.currentPage].scrollY+(process.stdout.rows-this.#layout.length) && i < pageData.length; i++) {
         let lineNumber = ((i+1).toString().length > 1) ? (i+1).toString() : ` ${(i+1).toString()}`
 
-        if (this.#pages[this.#data.currentPage].cursorY === i) lines.push(`${this.#style.selectBackground} ${this.#style.selectFont}${lineNumber}${FontColor.reset}${this.#style.background} | ${pageData[i].replaceAll('\n', '\\n')}`)
-        else lines.push(` ${lineNumber} | ${pageData[i].replaceAll('\n', '\\n')}`)
+        if (this.#pages[this.#data.currentPage].cursorY === i) lines.push(`${this.#style.selectBackground} ${this.#style.selectFont}${lineNumber}${FontColor.reset}${this.#style.background} | ${pageData[i]}`)
+        else lines.push(` ${lineNumber} | ${pageData[i]}`)
       }
 
       if (lines.length < process.stdout.rows-this.#layout.length) {
@@ -223,9 +230,9 @@ class DynamicCliBuilder {
         this.#data.input = ''
       }
     } else if (data.toString('hex') === keys.backspace) {
-      this.#callEvent('input', data)
- 
       if (this.#data.input.length > 0) this.#data.input = this.#data.input.substring(0, this.#data.input.length-1)
+
+      this.#callEvent('input', data)
     } else {
       this.#data.input+=data.toString().replaceAll('\n')
 
@@ -243,13 +250,20 @@ function sperateColorCode (text) {
     if (text[i] === '\x1b') {
       if (color === undefined) color = ''
 
+      let oldIndex = i
+
       while (text[i] !== 'm' && i < text.length) {
         color+=text[i]
 
         i++
       }
 
-      color+='m'
+      if (text[i] === 'm') color+='m'
+      else {
+        i = oldIndex
+
+        color
+      }
     } else {
       if (color === undefined) letters.push({ text: text[i] })
       else {
@@ -261,6 +275,17 @@ function sperateColorCode (text) {
   }
 
   return letters
+}
+
+// Get Newline amount
+function getNewlineAmount (text) {
+  let amount = 0
+
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === '\n') amount++
+  }
+
+  return amount
 }
 
 // Layout
